@@ -69,6 +69,28 @@ int read_config(const char *filename, int c[MAX_NODES][MAX_NODES], int *n){
     return 0;
 }
 
+int server_socket(int port){
+    int sockfd, new_fd;
+    struct sockaddr_in my_addr;
+    struct sockaddr_in their_addr;
+    if((sockfd = socket(PF_INET, SOCK_STREAM, 0)) < 0){
+        perror("Socket");
+        return -1;
+    };
+    my_addr.sin_family = AF_INET;
+    my_addr.sin_port = htons(port);
+    my_addr.sin_addr.s_addr = INADDR_ANY;
+    memset(&(my_addr.sin_zero), '\0', 8);
+    bind(sockfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr));
+    listen(sockfd, MAX_NODES);
+    socklen_t sin_size;
+    sin_size = sizeof(struct sockaddr_in);
+    if((new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size)) < 0){
+        perror("Accept");
+        return -1;
+    };
+}
+
 int main(int argc, char *argv[]) {
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <config-file>\n", argv[0]);
@@ -80,7 +102,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < MAX_NODES; i++) {
         for (int j = 0; j < MAX_NODES; j++) c[i][j] = (i == j) ? 0 : -1;
     }
-    
+
     if(read_config(argv[1], c, &n) == -1) return 1;
 
     printf("Number of nodes: %d\n", n);
