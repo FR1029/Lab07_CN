@@ -8,8 +8,13 @@
 #include <arpa/inet.h>
 
 #define MAX_NODES 26
-#define MAX_l 1024
 #define MYPORT 5000
+
+struct Node {
+    int fd;
+    u_int32_t ip;
+    u_int16_t port;
+};
 
 int read_config(const char *filename, int c[MAX_NODES][MAX_NODES], int *n){
     FILE *fd = fopen(filename, "r");
@@ -70,25 +75,24 @@ int read_config(const char *filename, int c[MAX_NODES][MAX_NODES], int *n){
 }
 
 int server_socket(int port){
-    int sockfd, new_fd;
+    int sockfd;
     struct sockaddr_in my_addr;
-    struct sockaddr_in their_addr;
     if((sockfd = socket(PF_INET, SOCK_STREAM, 0)) < 0){
         perror("Socket");
         return -1;
     };
+    int opt = 1;
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     my_addr.sin_family = AF_INET;
     my_addr.sin_port = htons(port);
     my_addr.sin_addr.s_addr = INADDR_ANY;
     memset(&(my_addr.sin_zero), '\0', 8);
-    bind(sockfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr));
-    listen(sockfd, MAX_NODES);
-    socklen_t sin_size;
-    sin_size = sizeof(struct sockaddr_in);
-    if((new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size)) < 0){
-        perror("Accept");
+    if(bind(sockfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr)) < 0){
+        perror("Bind");
         return -1;
-    };
+    }
+    listen(sockfd, MAX_NODES);
+    return sockfd;
 }
 
 int main(int argc, char *argv[]) {
@@ -104,7 +108,12 @@ int main(int argc, char *argv[]) {
     }
 
     if(read_config(argv[1], c, &n) == -1) return 1;
+    
+    int sockfd = server_socket(MYPORT);
+    if(sockfd < 0) return 1;
 
+    struct Node nodes[MAX_NODES];
+    
     printf("Number of nodes: %d\n", n);
     printf("Adjacency matrix:\n");
     for (int i = 0; i < n; i++) {
