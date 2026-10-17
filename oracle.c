@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include "protocol.h"
 
 #define MAX_NODES 26
 #define MYPORT 5000
@@ -95,6 +96,27 @@ int server_socket(int port){
     return sockfd;
 }
 
+void broadcast(int n, int c[MAX_NODES][MAX_NODES], struct Node nodes[]){
+    for(int i = 0; i < n; i++){
+        int num_links = 0;
+        for(int j = 0; j < n; j++){
+            if(c[i][j] != -1) num_links++;
+        }
+        num_links = htonl(num_links);
+        send(nodes[i].fd, &num_links, sizeof(num_links), 0);
+        struct LSTuple t;
+        for(int j = 0; j < n; j++){
+            if(c[i][j] != -1){
+                t.id = 'A' + j;
+                t.ip = nodes[j].ip;
+                t.port = nodes[j].port;
+                t.cost = htonl(c[i][j]);
+                send(nodes[i].fd, &t, sizeof(t), 0);
+            }
+        }
+    }
+}
+
 int main(int argc, char *argv[]) {
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <config-file>\n", argv[0]);
@@ -113,13 +135,36 @@ int main(int argc, char *argv[]) {
     if(sockfd < 0) return 1;
 
     struct Node nodes[MAX_NODES];
-    
-    printf("Number of nodes: %d\n", n);
-    printf("Adjacency matrix:\n");
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) printf("%4d", c[i][j]);
-        printf("\n");
+    int connected = 0;
+    while(connected < n){
+        struct sockaddr_in their_addr;
+        int sin_size = sizeof(struct sockaddr);
+        int new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
+        if(new_fd > 0){
+            struct message msg;
+            recv(new_fd, &msg, sizeof(msg), 0);
+            nodes[connected].fd = new_fd;
+            nodes[connected].ip = msg.ip;
+            nodes[connected].port = msg.port;
+            connected++;
+        }
     }
 
+    broadcast(n, c, nodes);
+    while(1){
+        printf("Number of nodes: %d\n", n);
+        printf("Adjacency matrix:\n");
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) printf("%4d", c[i][j]);
+            printf("\n");
+        }
+        sleep(10);
+        n = 0;
+        for(int i = 0; i < MAX_NODES; i++){
+            for(int j = 0; j < MAX_NODES; j++) c[i][j] = (i == j) ? 0 : -1;
+        }
+        if(read_config(argv[1], c, &n) == -1) return 1;
+        broadcast(n, c, nodes);
+    }
     return 0;
 }
