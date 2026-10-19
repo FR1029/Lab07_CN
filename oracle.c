@@ -4,7 +4,6 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
 #include "protocol.h"
 
@@ -35,12 +34,12 @@ int read_config(const char *filename, int c[MAX_NODES][MAX_NODES], int *n){
             fclose(fd);
             return -1;
         }
-        int costs[MAX_NODES];
-        int k = 0;
-        char *e;
+        int i = *n;
+        int j = i + 1;
         while(*p != '\0'){
             while(isspace(*p)) p++;
             if(*p == '\0') break;
+            char *e;
             int cost = strtol(p, &e, 10);
             if(p == e || cost < -1){
                 fprintf(stderr, "Invalid cost in row %d\n", *n+1);
@@ -48,28 +47,20 @@ int read_config(const char *filename, int c[MAX_NODES][MAX_NODES], int *n){
                 fclose(fd);
                 return -1;
             }
-            if(k >= MAX_NODES){
+            if(j >= MAX_NODES){
                 fprintf(stderr, "Too many entries in row %d\n", *n+1);
                 free(l);
                 fclose(fd);
                 return -1;
             }
-            costs[k++] = cost;
+            c[i][j] = cost;
+            c[j][i] = cost;
             p = e;
-        }
-        for(int i = 0; i < k; i++){
-            int j = *n+i+1;
-            if(j >= MAX_NODES){
-                fprintf(stderr, "Invalid row\n");
-                free(l);
-                fclose(fd);
-                return -1;
-            }
-            c[*n][j] = costs[i];
-            c[j][*n] = costs[i];
+            j++;
         }
         (*n)++;
     }
+    (*n)++;
     free(l);
     fclose(fd);
     return 0;
@@ -82,8 +73,6 @@ int server_socket(int port){
         perror("Socket");
         return -1;
     };
-    int opt = 1;
-    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     my_addr.sin_family = AF_INET;
     my_addr.sin_port = htons(port);
     my_addr.sin_addr.s_addr = INADDR_ANY;
@@ -140,7 +129,7 @@ int main(int argc, char *argv[]) {
         struct sockaddr_in their_addr;
         int sin_size = sizeof(struct sockaddr);
         int new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
-        if(new_fd > 0){
+        if(new_fd >= 0){
             struct message msg;
             recv(new_fd, &msg, sizeof(msg), 0);
             nodes[connected].fd = new_fd;
