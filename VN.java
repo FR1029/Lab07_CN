@@ -36,7 +36,7 @@ public class VN {
         udp_socket.setSoTimeout(10000);
 
         System.out.println("Connnecting to Oracle Node at " + on_ip + ":5000...");
-        Socket tcp_socket = new Socket(on_ip, 5200);
+        Socket tcp_socket = new Socket(on_ip, 5000);
         DataOutputStream out = new DataOutputStream(tcp_socket.getOutputStream());
         DataInputStream in = new DataInputStream(tcp_socket.getInputStream());
 
@@ -84,11 +84,11 @@ public class VN {
                         max_node(tuple.id);
                         System.out.println(tuple.id + "=" + tuple.cost);
                     }
-                    System.out.println("--------------------");
+                    System.out.println("-----------------------------------------");
 
                     int my_idx = my_id - 'A';
                     for (int i = 0; i < 26; i++) graph[my_idx][i] = (i == my_idx) ? 0 : -1;
-                    for (LSTuple t : links) {
+                    for (LSTuple tuple : links) {
                         graph[my_idx][tuple.id - 'A'] = tuple.cost;
                         graph[tuple.id - 'A'][my_idx] = tuple.cost;
                     }
@@ -118,7 +118,7 @@ public class VN {
                     }
                     for(LSTuple t : links) {
                         if(t.cost > 0){
-                            DatagramPacket lsp = new DatagramPacket(packet_received.getData(), packet_received.getLength(), t.id, t.port);
+                            DatagramPacket lsp = new DatagramPacket(packet_received.getData(), packet_received.getLength(), t.ip, t.port);
                             udp_socket.send(lsp);
                         }
                     }
@@ -140,7 +140,7 @@ public class VN {
             for(int j = i + 1; j < n; j++) row.append(graph[i][j]).append("\t");
             System.out.println(row.toString());
         }
-        System.out.println("--------------------\n");
+        System.out.println("-----------------------------------------\n");
     }
 
     private static void max_node (char id) {
@@ -149,11 +149,11 @@ public class VN {
     }
 
     private static void broadcast_lsp(char my_id, int seq_num, List<LSTuple> links, DatagramSocket udp_socket) throws IOException {
-        int packet_size = 1 + 4 + 4 + (link_count * 11);
+        int packet_size = 1 + 4 + 4 + (links.size() * 11);
         ByteBuffer buffer = ByteBuffer.allocate(packet_size);
         buffer.put((byte) my_id);
         buffer.putInt(seq_num);
-        buffer.putInt(link_count);
+        buffer.putInt(links.size());
 
         for(LSTuple t : links) {
             buffer.put((byte) t.id);
