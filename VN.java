@@ -76,7 +76,7 @@ public class VN {
                         in.readFully(ip_bytes);
                         tuple.ip = InetAddress.getByAddress(ip_bytes);
 
-                        tuple.port = in.readShort() & 0xFFF;
+                        tuple.port = in.readShort() & 0xFFFF;
                         tuple.cost = in.readInt();
                         links.add(tuple);
 
