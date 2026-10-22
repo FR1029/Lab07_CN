@@ -33,7 +33,7 @@ public class VN {
         char my_id = '?';
 
         DatagramSocket udp_socket = new DatagramSocket(own_udp_port);
-        udp_socket.setSoTimeout(10000);
+        udp_socket.setSoTimeout(100);
 
         System.out.println("Connnecting to Oracle Node at " + on_ip + ":5000...");
         Socket tcp_socket = new Socket(on_ip, 5000);
@@ -61,7 +61,15 @@ public class VN {
         byte[] data_received = new byte[2048];
 
         System.out.println("Entering Link_State Event Loop: ");
+        long last_periodic = System.currentTimeMillis();
         while(true) {
+            long now = System.currentTimeMillis();
+            if(!links.isEmpty() && now - last_periodic >= 10000){
+                seq_num++;
+                broadcast_lsp(my_id, seq_num, links, udp_socket);
+                print_graph();
+                last_periodic = now;
+            }
             try {
                 if(in.available() > 0) {
                     link_count = in.readInt();
@@ -124,10 +132,7 @@ public class VN {
                     }
                 }
             } catch (SocketTimeoutException e) {
-                if (links.isEmpty()) continue;
-                seq_num++;
-                broadcast_lsp(my_id, seq_num, links, udp_socket);
-                print_graph();
+                continue;
             }
         }
     }

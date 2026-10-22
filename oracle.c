@@ -98,7 +98,7 @@ void broadcast(int n, int c[MAX_NODES][MAX_NODES], struct Node nodes[]){
             if(c[i][j] != -1){
                 t.id = 'A' + j;
                 t.ip = nodes[j].ip;
-                t.port = nodes[j].port;
+                t.port = ntohs(nodes[j].port);
                 t.cost = htonl(c[i][j]);
                 send(nodes[i].fd, &t, sizeof(t), 0);
             }
@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
             recv(new_fd, &msg, sizeof(msg), 0);
             nodes[connected].fd = new_fd;
             nodes[connected].ip = msg.ip;
-            nodes[connected].port = msg.port;
+            nodes[connected].port = ntohs(msg.port);
             connected++;
         }
     }
