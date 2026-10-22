@@ -138,22 +138,33 @@ int main(int argc, char *argv[]) {
             connected++;
         }
     }
-
+    printf("Number of nodes: %d\n", n);
+    printf("Adjacency matrix:\n");
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) printf("%4d", c[i][j]);
+        printf("\n");
+    }
     broadcast(n, c, nodes);
     while(1){
-        printf("Number of nodes: %d\n", n);
-        printf("Adjacency matrix:\n");
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) printf("%4d", c[i][j]);
-            printf("\n");
-        }
         sleep(10);
+        int oldC[MAX_NODES][MAX_NODES] ;
+        memcpy(oldC, c, sizeof(oldC));
+
         n = 0;
         for(int i = 0; i < MAX_NODES; i++){
             for(int j = 0; j < MAX_NODES; j++) c[i][j] = (i == j) ? 0 : -1;
         }
         if(read_config(argv[1], c, &n) == -1) return 1;
-        broadcast(n, c, nodes);
+        if(memcmp(oldC, c, sizeof(oldC)) != 0){
+            printf("Topology changes! Broadcasting updates\n");
+            printf("Number of nodes: %d\n", n);
+            printf("Adjacency matrix:\n");
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) printf("%4d", c[i][j]);
+                printf("\n");
+            }
+            broadcast(n, c, nodes);
+        }
     }
     return 0;
 }
