@@ -98,7 +98,7 @@ void broadcast(int n, int c[MAX_NODES][MAX_NODES], struct Node nodes[]){
             if(c[i][j] != -1){
                 t.id = 'A' + j;
                 t.ip = nodes[j].ip;
-                t.port = ntohs(nodes[j].port);
+                t.port = htons(nodes[j].port);
                 t.cost = htonl(c[i][j]);
                 send(nodes[i].fd, &t, sizeof(t), 0);
             }
